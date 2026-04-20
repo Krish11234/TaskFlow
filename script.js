@@ -2,10 +2,10 @@
 
 
 //selecting different html elements to use them further
+// selecting different html elements
 const todo= document.querySelector("#todo");
 const progress= document.querySelector("#progress");
 const done= document.querySelector("#done");
-const taskCol= document.querySelector(".task-column")
 let dragElement= null;
 const addBtn= document.querySelector(".addBtn");
 const modal= document.querySelector(".modal");
@@ -13,27 +13,23 @@ const modalBg= document.querySelector(".modal .bg");
 const board= document.querySelector(".board");
 let taskInp= document.querySelector("input");
 let taskDesc= document.querySelector("textarea");
+let taskBtn= document.querySelector("#add-new-task");
+
+// 🔥 GLOBAL STATE (localStorage)
+let tasksData = JSON.parse(localStorage.getItem("tasks")) || [];
 
 
-// pure logic for updating count on some activity
+// update count
 function updateCount(){
     [todo, progress, done].forEach(function(col){
         let tasks= col.querySelectorAll(".task");
         let count= col.querySelector(".right");
         count.textContent= tasks.length;
-        // console.log(count);
     })
 }
 
 
-// initials for making the task draggable (unseparable with draggable logic)
-const tasks= document.querySelectorAll(".task");
-tasks.forEach(function(task){
-    task.addEventListener("dragstart", function(e){
-        dragElement= task;
-    })
-})
-// pure logic for making the task draggable and also droppable
+// DRAG LOGIC
 function dragEvent(column){
     column.addEventListener("dragenter", function(e){
         e.preventDefault();
@@ -49,121 +45,146 @@ function dragEvent(column){
     column.addEventListener("drop", function(e){
         column.appendChild(dragElement);
         column.classList.remove("hover-over");
-        
+
+        // 🔥 update status in data
+        let id = dragElement.dataset.id;
+
+        tasksData = tasksData.map(task => {
+            if(task.id == id){
+                if(column.id === "todo") task.status = "todo";
+                else if(column.id === "progress") task.status = "progress";
+                else task.status = "done";
+            }
+            return task;
+        });
+
+        localStorage.setItem("tasks", JSON.stringify(tasksData));
+
         updateCount();
     })
 }
 
-//invoking the function for all columns
 dragEvent(todo);
 dragEvent(progress);
 dragEvent(done);
 
 
-//logic for creating a new task
-function newTask(){
+// 🔥 RENDER FUNCTION
+function renderTask(taskObj){
     let div= document.createElement("div");
     div.classList.add("task");
     div.setAttribute("draggable", "true");
+    div.dataset.id = taskObj.id;
 
-    //creating h2
     let h2= document.createElement("h2");
-    h2.setAttribute("class", "task-title");
-    h2.textContent= taskInp.value;
+    h2.className = "task-title";
+    h2.textContent= taskObj.title;
 
-    //creating p tag
     let p= document.createElement("p");
-    p.setAttribute("class", "task-desc");
-    p.textContent= taskDesc.value;
+    p.className = "task-desc";
+    p.textContent= taskObj.desc;
 
-    //creating delete button
     let delBtn= document.createElement("button");
-    delBtn.setAttribute("class", "delete-btn");
+    delBtn.className = "delete-btn";
     delBtn.textContent= "Delete";
 
-    //appending element into div
-    div.append(h2);
-    div.append(p);
-    div.append(delBtn);
+    div.append(h2, p, delBtn);
 
-    //appending div to todo (main screen)
-    todo.appendChild(div);
+    // place based on status
+    if(taskObj.status === "todo") todo.appendChild(div);
+    else if(taskObj.status === "progress") progress.appendChild(div);
+    else done.appendChild(div);
 
-    //input removed when previous one is added
+    // drag logic
+    div.addEventListener("dragstart", function(){
+        dragElement = div;
+    });
+}
+
+
+// 🔥 CREATE NEW TASK
+function newTask(){
+    let id = Date.now();
+
+    let taskObj = {
+        id: id,
+        title: taskInp.value,
+        desc: taskDesc.value,
+        status: "todo"
+    };
+
+    tasksData.push(taskObj);
+    localStorage.setItem("tasks", JSON.stringify(tasksData));
+
+    renderTask(taskObj);
+
     taskInp.value= "";
     taskDesc.value= "";
-
-    //making new task draggable
-    div.addEventListener("dragstart", function(e){
-        dragElement= div;
-    })
 }
 
 
-// logic for showing add new task screen
+// LOAD TASKS ON START
+function loadTasks(){
+    tasksData.forEach(task => renderTask(task));
+    updateCount();
+}
+loadTasks();
+
+
+// modal open/close
 addBtn.addEventListener("click", function(){
     modal.classList.toggle("active");
-
-})
-// logic for removing add new task screen
-modalBg.addEventListener("click", function(e){
-modal.classList.remove("active");
 })
 
+modalBg.addEventListener("click", function(){
+    modal.classList.remove("active");
+})
 
 
-let taskBtn= document.querySelector("#add-new-task");
-// logic for blocking empty tasks
+// validation
 function validateInput(){
-    let isValid= true;
-    if(taskInp.value.trim()== ""){
-        isValid= false;
-    }else{
-        isValid= true;
-    }
-
-    return isValid;
+    return taskInp.value.trim() !== "";
 }
 
 
-// creating a new task by event listener of clicking add new task button
+// add task button
 taskBtn.addEventListener("click", function(e){
     e.preventDefault();
 
     if(validateInput()){
-
-        //invoking for creating new task
         newTask();
-
-        //invoking for count updation on creation
         updateCount();
 
-        //when inputs are filled
         taskBtn.disabled= false;
         taskInp.removeAttribute("id", "disabled-input-text");
     }
     else{
-        //when inputs arent filled
         taskBtn.disabled= true;
         taskInp.setAttribute("id", "disabled-input-text");
     }    
 })
 
 
-// checking again if input filled or not
-taskInp.addEventListener("input", function(e){
+// input check
+taskInp.addEventListener("input", function(){
     if(taskInp.value.trim()!== ""){
-        taskBtn .disabled= false;
+        taskBtn.disabled= false;
         taskInp.removeAttribute("id", "disabled-input-text");
     }
 })
 
 
-// delete button event listener + logic
+// delete logic (FIXED)
 board.addEventListener("click",function(e){
     if(e.target.classList.contains("delete-btn")){
-        // console.log(e.target);
-        todo.removeChild(e.target.closest(".task"));
+        let taskDiv = e.target.closest(".task");
+        let id = taskDiv.dataset.id;
+
+        taskDiv.remove();
+
+        tasksData = tasksData.filter(task => task.id != id);
+        localStorage.setItem("tasks", JSON.stringify(tasksData));
+
         updateCount();
     }
 })
