@@ -15,7 +15,7 @@ let taskInp= document.querySelector("input");
 let taskDesc= document.querySelector("textarea");
 let taskBtn= document.querySelector("#add-new-task");
 
-// 🔥 GLOBAL STATE (localStorage)
+// GLOBAL STATE (localStorage)
 let tasksData = JSON.parse(localStorage.getItem("tasks")) || [];
 
 
@@ -46,7 +46,7 @@ function dragEvent(column){
         column.appendChild(dragElement);
         column.classList.remove("hover-over");
 
-        // 🔥 update status in data
+        //  update status in data
         let id = dragElement.dataset.id;
 
         tasksData = tasksData.map(task => {
@@ -69,7 +69,7 @@ dragEvent(progress);
 dragEvent(done);
 
 
-// 🔥 RENDER FUNCTION
+//  RENDER FUNCTION
 function renderTask(taskObj){
     let div= document.createElement("div");
     div.classList.add("task");
@@ -102,7 +102,7 @@ function renderTask(taskObj){
 }
 
 
-// 🔥 CREATE NEW TASK
+//  CREATE NEW TASK
 function newTask(){
     let id = Date.now();
 
@@ -174,7 +174,7 @@ taskInp.addEventListener("input", function(){
 })
 
 
-// delete logic (FIXED)
+// delete logic
 board.addEventListener("click",function(e){
     if(e.target.classList.contains("delete-btn")){
         let taskDiv = e.target.closest(".task");
